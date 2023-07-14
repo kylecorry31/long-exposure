@@ -5,6 +5,7 @@ from stacking.maximum import MaximumStacker
 from stacking.average import AverageStacker
 from stacking.minimum import MinimumStacker
 from reader.video import VideoReader
+from reader.folder import FolderReader
 import argparse
 from tqdm import tqdm
 import cv2
@@ -12,7 +13,7 @@ import os
 
 # Parse arguments
 parser = argparse.ArgumentParser(description='Stack images from a video.')
-parser.add_argument('video', help='path to video file')
+parser.add_argument('input', help='path to video file or image folder')
 parser.add_argument('output', help='path to output file')
 parser.add_argument('--align', help='alignment method', choices=['sift', 'ecc', 'none'], default='none')
 parser.add_argument('--stack', help='stacking method', choices=['max', 'avg', 'min'], default='avg')
@@ -20,7 +21,10 @@ parser.add_argument('--stack', help='stacking method', choices=['max', 'avg', 'm
 args = parser.parse_args()
 
 # Read video
-reader = VideoReader(args.video)
+if os.path.isdir(args.input):
+    reader = FolderReader(args.input)
+else:
+    reader = VideoReader(args.input)
 
 # Create aligner
 if args.align == 'sift':
