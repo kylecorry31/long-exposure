@@ -19,6 +19,10 @@ class SiftAligner(Aligner):
             self.ref_descriptors = self.ref_descriptors.astype(np.float32)
 
     def align(self, frame):
+        if self.reference is None:
+            self.set_reference(frame)
+            return frame
+
         converted_frame = frame.astype(np.uint8)
         # Convert images to grayscale
         frame_gray = cv2.cvtColor(converted_frame, cv2.COLOR_BGR2GRAY)

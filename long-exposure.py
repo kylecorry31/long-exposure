@@ -1,5 +1,6 @@
 from alignment.null import NullAligner
 from alignment.sift import SiftAligner
+from alignment.ecc import EccAligner
 from stacking.maximum import MaximumStacker
 from stacking.average import AverageStacker
 from stacking.minimum import MinimumStacker
@@ -13,7 +14,7 @@ import os
 parser = argparse.ArgumentParser(description='Stack images from a video.')
 parser.add_argument('video', help='path to video file')
 parser.add_argument('output', help='path to output file')
-parser.add_argument('--align', help='alignment method', choices=['sift', 'none'], default='none')
+parser.add_argument('--align', help='alignment method', choices=['sift', 'ecc', 'none'], default='none')
 parser.add_argument('--stack', help='stacking method', choices=['max', 'avg', 'min'], default='avg')
 
 args = parser.parse_args()
@@ -24,6 +25,8 @@ reader = VideoReader(args.video)
 # Create aligner
 if args.align == 'sift':
     aligner = SiftAligner()
+elif args.align == 'ecc':
+    aligner = EccAligner()
 else:
     aligner = NullAligner()
 
@@ -41,6 +44,7 @@ with tqdm(total=reader.total_frames()) as pbar:
         frame = reader.next_frame()
         if frame is None:
             break
+        frame = aligner.align(frame)
         stacker.stack(frame)
         pbar.update(1)
 
