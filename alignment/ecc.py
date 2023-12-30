@@ -4,11 +4,17 @@ import numpy as np
 
 
 class EccAligner(Aligner):
-    def __init__(self):
+    def __init__(self, threshold=0.0):
         super().__init__()
+        self.threshold = threshold
+
+    def apply_threshold(self, frame):
+        converted_frame = cv2.cvtColor(frame.astype(np.uint8), cv2.COLOR_BGR2GRAY)
+        _, converted_frame = cv2.threshold(converted_frame, self.threshold, 255, cv2.THRESH_TOZERO)
+        return converted_frame
 
     def set_reference(self, reference):
-        self.reference = cv2.cvtColor(reference.astype(np.uint8), cv2.COLOR_BGR2GRAY)
+        self.reference = self.apply_threshold(reference)
     
     def align(self, frame):
         if self.reference is None:
@@ -16,7 +22,7 @@ class EccAligner(Aligner):
             return frame
 
         # Convert the current frame to grayscale
-        gray_frame = cv2.cvtColor(frame.astype(np.uint8), cv2.COLOR_BGR2GRAY)
+        gray_frame = self.apply_threshold(frame)
         # Estimate the geometric transformation that aligns the current frame to the reference frame
         warp_matrix = np.eye(2, 3, dtype=np.float32)
         criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 50, 0.001)

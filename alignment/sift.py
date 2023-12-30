@@ -4,17 +4,22 @@ import numpy as np
 
 
 class SiftAligner(Aligner):
-    def __init__(self):
+    def __init__(self, threshold=0.0):
         super().__init__()
         self.ref_keypoints = None
         self.ref_descriptors = None
         self.sift = cv2.SIFT_create()
         self.matcher = cv2.BFMatcher()
+        self.threshold = threshold
+
+    def apply_threshold(self, frame):
+        converted_frame = cv2.cvtColor(frame.astype(np.uint8), cv2.COLOR_BGR2GRAY)
+        _, converted_frame = cv2.threshold(converted_frame, self.threshold, 255, cv2.THRESH_TOZERO)
+        return converted_frame
 
     def set_reference(self, reference):
-        self.reference = reference.astype(np.uint8)
-        self.ref_keypoints, self.ref_descriptors = self.sift.detectAndCompute(
-            cv2.cvtColor(self.reference, cv2.COLOR_BGR2GRAY), None)
+        self.reference = self.apply_threshold(reference)
+        self.ref_keypoints, self.ref_descriptors = self.sift.detectAndCompute(self.reference, None)
         if self.ref_descriptors.dtype != np.float32:
             self.ref_descriptors = self.ref_descriptors.astype(np.float32)
 
@@ -23,9 +28,8 @@ class SiftAligner(Aligner):
             self.set_reference(frame)
             return frame
 
-        converted_frame = frame.astype(np.uint8)
         # Convert images to grayscale
-        frame_gray = cv2.cvtColor(converted_frame, cv2.COLOR_BGR2GRAY)
+        frame_gray = self.apply_threshold(frame)
 
         # Find keypoints and descriptors for the second image
         kp2, des2 = self.sift.detectAndCompute(frame_gray, None)
@@ -49,7 +53,7 @@ class SiftAligner(Aligner):
         h, mask = cv2.findHomography(points2, points1, cv2.RANSAC)
 
         # Use homography to align images
-        height, width, channels = self.reference.shape
+        height, width = self.reference.shape
         im2_aligned = cv2.warpPerspective(frame, h, (width, height))
 
         return im2_aligned
