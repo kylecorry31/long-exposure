@@ -1,6 +1,7 @@
 from alignment.null import NullAligner
 from alignment.sift import SiftAligner
 from alignment.ecc import EccAligner
+from alignment.moment import MomentAligner
 from stacking.maximum import MaximumStacker
 from stacking.average import AverageStacker
 from stacking.minimum import MinimumStacker
@@ -15,7 +16,7 @@ import os
 parser = argparse.ArgumentParser(description='Stack images from a video.')
 parser.add_argument('input', help='path to video file or image folder')
 parser.add_argument('output', help='path to output file')
-parser.add_argument('--align', help='alignment method', choices=['sift', 'ecc', 'none'], default='none')
+parser.add_argument('--align', help='alignment method', choices=['sift', 'ecc', 'moment', 'none'], default='none')
 parser.add_argument('--stack', help='stacking method', choices=['max', 'avg', 'min'], default='avg')
 parser.add_argument('--threshold', help='brightness threshold for alignment', type=float, default=0.0)
 
@@ -32,6 +33,8 @@ if args.align == 'sift':
     aligner = SiftAligner(args.threshold)
 elif args.align == 'ecc':
     aligner = EccAligner(args.threshold)
+elif args.align == 'moment':
+    aligner = MomentAligner(args.threshold)
 else:
     aligner = NullAligner()
 
