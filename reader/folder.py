@@ -11,7 +11,7 @@ class FolderReader(Reader):
         self._files = os.listdir(path)
         self._files.sort()
         # Filter out non-image files
-        self._files = [f for f in self._files if f.endswith('.jpg') or f.endswith('.png')]
+        self._files = [f for f in self._files if f.endswith('.jpg') or f.endswith('.png') or f.endswith('.tif')]
         self._count = len(self._files)
     
     def next_frame(self) -> np.ndarray:
