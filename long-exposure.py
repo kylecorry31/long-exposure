@@ -6,11 +6,15 @@ from alignment.orb import OrbAligner
 from alignment.sift import SiftAligner
 from alignment.ecc import EccAligner
 from alignment.moment import MomentAligner
+from scoring.contrast import ContrastScorer
+from scoring.sharpness import SharpnessScorer
 from stacking.maximum import MaximumStacker
 from stacking.average import AverageStacker
 from stacking.minimum import MinimumStacker
 from reader.video import VideoReader
 from reader.folder import FolderReader
+from reader.sorted import SortedReader
+from scoring.brightness import BrightnessScorer
 import argparse
 from tqdm import tqdm
 import cv2
@@ -30,7 +34,16 @@ parser.add_argument(
     "--stack", help="stacking method", choices=["max", "avg", "min"], default="avg"
 )
 parser.add_argument(
+    "--top", help="percent of top frames to stack", type=float, default=100.0
+)
+parser.add_argument(
     "--threshold", help="brightness threshold for alignment", type=float, default=0.0
+)
+parser.add_argument(
+    "--score",
+    help="scoring method",
+    choices=["contrast", "brightness", "sharpness", "none"],
+    default="none",
 )
 
 args = parser.parse_args()
@@ -40,6 +53,15 @@ if os.path.isdir(args.input):
     reader = FolderReader(args.input)
 else:
     reader = VideoReader(args.input)
+
+if args.score == "brightness":
+    reader = SortedReader(reader, BrightnessScorer(), args.top / 100.0)
+elif args.score == "contrast":
+    reader = SortedReader(reader, ContrastScorer(), args.top / 100.0)
+elif args.score == "sharpness":
+    reader = SortedReader(reader, SharpnessScorer(), args.top / 100.0)
+elif args.top < 100.0:
+    reader = SortedReader(reader, ContrastScorer(), args.top / 100.0)
 
 # Create aligner
 if args.align == "sift":
