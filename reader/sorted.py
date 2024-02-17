@@ -1,6 +1,7 @@
 from scoring import Scorer
 from . import Reader
 import numpy as np
+from tqdm import tqdm
 
 class SortedReader(Reader):
 
@@ -10,12 +11,14 @@ class SortedReader(Reader):
         scores = []
         self.index = 0
 
-        for i in range(reader.total_frames()):
-            frame = reader.next_frame()
-            if frame is None:
-                break
-            self.frames.append(frame)
-            scores.append(scorer.score(frame))
+        with tqdm(total=reader.total_frames(), desc="Scoring frames") as pbar:
+            for i in range(reader.total_frames()):
+                frame = reader.next_frame()
+                if frame is None:
+                    break
+                self.frames.append(frame)
+                scores.append(scorer.score(frame))
+                pbar.update(1)
         reader.close()
 
         # Sort the frames by score
