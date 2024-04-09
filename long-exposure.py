@@ -1,3 +1,4 @@
+from alignment.bottom_left import BottomLeftAligner
 from alignment.fft import FFTAligner
 from alignment.fourier_shift import FourierShiftAligner
 from alignment.moment_rotate import MomentRotateAligner
@@ -27,7 +28,7 @@ parser.add_argument("output", help="path to output file")
 parser.add_argument(
     "--align",
     help="alignment method",
-    choices=["sift", "ecc", "moment", "moment_rotate", "orb", "fourier", "fft", "none"],
+    choices=["sift", "ecc", "moment", "moment_rotate", "orb", "fourier", "fft", "bottom-left", "none"],
     default="none",
 )
 parser.add_argument(
@@ -44,6 +45,12 @@ parser.add_argument(
     help="scoring method",
     choices=["contrast", "brightness", "sharpness", "none"],
     default="none",
+)
+parser.add_argument(
+    "--rotation",
+    help="rotation angle of the image",
+    type=int,
+    default=0
 )
 
 args = parser.parse_args()
@@ -76,6 +83,8 @@ elif args.align == "moment_rotate":
     aligner = MomentRotateAligner(args.threshold)
 elif args.align == "fourier" or args.align == "fft":
     aligner = FFTAligner(args.threshold)
+elif args.align == "bottom-left":
+    aligner = BottomLeftAligner(args.threshold)
 else:
     aligner = NullAligner()
 
@@ -99,6 +108,14 @@ with tqdm(total=reader.total_frames()) as pbar:
         i += 1
         if frame is None:
             break
+        # Rotate the frame
+        if args.rotation == 90:
+            frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+        elif args.rotation == 180:
+            frame = cv2.rotate(frame, cv2.ROTATE_180)
+        elif args.rotation == 270:
+            frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            
         frame = aligner.align(frame)
         # Save frame back to a subfolder
         frame_path = os.path.join(aligned_folder, f"{i}.jpg")

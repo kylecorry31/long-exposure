@@ -10,6 +10,10 @@ class FolderReader(Reader):
         self._index = 0
         self._files = os.listdir(path)
         self._files.sort()
+
+        # Sort by the number in the filename
+        # self._files.sort(key=lambda x: int(x.split('.')[0]))
+
         # Filter out non-image files
         self._files = [f for f in self._files if f.endswith('.jpg') or f.endswith('.png') or f.endswith('.tif')]
         self._count = len(self._files)
