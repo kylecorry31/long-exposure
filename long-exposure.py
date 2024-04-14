@@ -58,6 +58,12 @@ parser.add_argument(
     type=int,
     default=1
 )
+parser.add_argument(
+    "--mask",
+    help="whether to use the threshold as a mask",
+    type=bool,
+    default=False
+)
 
 args = parser.parse_args()
 
@@ -130,6 +136,12 @@ with tqdm(total=reader.total_frames()) as pbar:
             frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
             
         frame = aligner.align(frame)
+
+        # Apply mask
+        if args.mask:
+            mask = cv2.inRange(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), args.threshold, 255)
+            frame = cv2.bitwise_and(frame, frame, mask=mask)
+
         # Save frame back to a subfolder
         frame_path = os.path.join(aligned_folder, f"{i}.jpg")
         cv2.imwrite(frame_path, frame)
