@@ -52,6 +52,12 @@ parser.add_argument(
     type=int,
     default=0
 )
+parser.add_argument(
+    "--step",
+    help="step to skip frames",
+    type=int,
+    default=1
+)
 
 args = parser.parse_args()
 
@@ -105,7 +111,14 @@ i = 0
 with tqdm(total=reader.total_frames()) as pbar:
     while True:
         frame = reader.next_frame()
+
+        if i % args.step != 0:
+            pbar.update(1)
+            i += 1
+            continue
+
         i += 1
+
         if frame is None:
             break
         # Rotate the frame
