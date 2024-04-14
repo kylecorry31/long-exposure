@@ -25,6 +25,9 @@ class FolderReader(Reader):
         self._index += 1
         return frame
     
+    def skip_next_frame(self):
+        self._index += 1
+    
     def total_frames(self) -> int:
         return self._count
     

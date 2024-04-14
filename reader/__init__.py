@@ -7,6 +7,9 @@ class Reader(object):
     def next_frame(self) -> np.ndarray:
         return None
     
+    def skip_next_frame(self):
+        pass
+    
     def total_frames(self) -> int:
         return 0
     

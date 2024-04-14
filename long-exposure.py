@@ -110,14 +110,14 @@ if not os.path.exists(aligned_folder):
 i = 0
 with tqdm(total=reader.total_frames()) as pbar:
     while True:
-        frame = reader.next_frame()
-
         if i % args.step != 0:
             pbar.update(1)
+            reader.skip_next_frame()
             i += 1
             continue
 
         i += 1
+        frame = reader.next_frame()
 
         if frame is None:
             break
