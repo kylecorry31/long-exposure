@@ -11,6 +11,7 @@ from scoring.contrast import ContrastScorer
 from scoring.sharpness import SharpnessScorer
 from stacking.maximum import MaximumStacker
 from stacking.average import AverageStacker
+from stacking.median import MedianStacker
 from stacking.minimum import MinimumStacker
 from reader.video import VideoReader
 from reader.folder import FolderReader
@@ -32,7 +33,7 @@ parser.add_argument(
     default="none",
 )
 parser.add_argument(
-    "--stack", help="stacking method", choices=["max", "avg", "min"], default="avg"
+    "--stack", help="stacking method", choices=["max", "avg", "min", "median"], default="avg"
 )
 parser.add_argument(
     "--top", help="percent of top frames to stack", type=float, default=100.0
@@ -105,6 +106,8 @@ if args.stack == "max":
     stacker = MaximumStacker()
 elif args.stack == "min":
     stacker = MinimumStacker()
+elif args.stack == "median":
+    stacker = MedianStacker()
 else:
     stacker = AverageStacker()
 
