@@ -25,6 +25,14 @@ class FolderReader(Reader):
         self._index += 1
         return frame
     
+    def get_frame(self, i) -> np.ndarray:
+        if i < 0 or i >= self._count:
+            return None
+        return cv2.imread(os.path.join(self._path, self._files[i]))
+
+    def reset(self):
+        self._index = 0
+
     def skip_next_frame(self):
         self._index += 1
     

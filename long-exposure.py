@@ -7,8 +7,10 @@ from alignment.orb import OrbAligner
 from alignment.sift import SiftAligner
 from alignment.ecc import EccAligner
 from alignment.moment import MomentAligner
+from alignment.planetary import PlanetaryAligner
 from scoring.contrast import ContrastScorer
 from scoring.sharpness import SharpnessScorer
+from scoring.smallest_area import SmallestAreaScorer
 from stacking.maximum import MaximumStacker
 from stacking.average import AverageStacker
 from stacking.median import MedianStacker
@@ -17,10 +19,12 @@ from reader.video import VideoReader
 from reader.folder import FolderReader
 from reader.sorted import SortedReader
 from scoring.brightness import BrightnessScorer
+from thresholding import has_valid_pixels
 import argparse
 from tqdm import tqdm
 import cv2
 import os
+import numpy as np
 
 # Parse arguments
 parser = argparse.ArgumentParser(description="Stack images from a video.")
@@ -29,7 +33,7 @@ parser.add_argument("output", help="path to output file")
 parser.add_argument(
     "--align",
     help="alignment method",
-    choices=["sift", "ecc", "moment", "moment_rotate", "orb", "fourier", "fft", "bottom-left", "none"],
+    choices=["sift", "ecc", "moment", "moment_rotate", "orb", "fourier", "fft", "bottom-left", "planetary", "none"],
     default="none",
 )
 parser.add_argument(
@@ -44,7 +48,7 @@ parser.add_argument(
 parser.add_argument(
     "--score",
     help="scoring method",
-    choices=["contrast", "brightness", "sharpness", "none"],
+    choices=["contrast", "brightness", "sharpness", "smallest", "none"],
     default="none",
 )
 parser.add_argument(
@@ -65,6 +69,12 @@ parser.add_argument(
     type=bool,
     default=False
 )
+parser.add_argument(
+    "--border",
+    help="ignore border percent (percent of the border area to ignore)",
+    type=float,
+    default=0.0
+)
 
 args = parser.parse_args()
 
@@ -75,13 +85,15 @@ else:
     reader = VideoReader(args.input)
 
 if args.score == "brightness":
-    reader = SortedReader(reader, BrightnessScorer(), args.top / 100.0)
+    reader = SortedReader(reader, BrightnessScorer(), args.top / 100.0, args.border / 100.0, args.threshold)
 elif args.score == "contrast":
-    reader = SortedReader(reader, ContrastScorer(), args.top / 100.0)
+    reader = SortedReader(reader, ContrastScorer(), args.top / 100.0, args.border / 100.0, args.threshold)
 elif args.score == "sharpness":
-    reader = SortedReader(reader, SharpnessScorer(), args.top / 100.0)
+    reader = SortedReader(reader, SharpnessScorer(), args.top / 100.0, args.border / 100.0, args.threshold)
+elif args.score == "smallest":
+    reader = SortedReader(reader, SmallestAreaScorer(args.threshold), args.top / 100.0, args.border / 100.0, args.threshold)
 elif args.top < 100.0:
-    reader = SortedReader(reader, ContrastScorer(), args.top / 100.0)
+    reader = SortedReader(reader, ContrastScorer(), args.top / 100.0, args.border / 100.0, args.threshold)
 
 # Create aligner
 if args.align == "sift":
@@ -98,6 +110,8 @@ elif args.align == "fourier" or args.align == "fft":
     aligner = FFTAligner(args.threshold)
 elif args.align == "bottom-left":
     aligner = BottomLeftAligner(args.threshold)
+elif args.align == "planetary":
+    aligner = PlanetaryAligner(args.threshold)
 else:
     aligner = NullAligner()
 
@@ -139,6 +153,8 @@ with tqdm(total=reader.total_frames()) as pbar:
             frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
             
         frame = aligner.align(frame)
+        if frame is None:
+            continue
 
         # Apply mask
         if args.mask:

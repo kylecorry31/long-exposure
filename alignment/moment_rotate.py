@@ -31,17 +31,22 @@ class MomentRotateAligner(Aligner):
         frame_moment = cv2.moments(gray_frame)
 
         # Calculate the centroid of the reference and current frame
+        m00 = frame_moment["m00"]
+        if m00 == 0:
+            print("Warning: Frame moment is zero, cannot align frame.")
+            return None
+        
         reference_centroid_x = int(reference_moment["m10"] / reference_moment["m00"])
         reference_centroid_y = int(reference_moment["m01"] / reference_moment["m00"])
-        frame_centroid_x = int(frame_moment["m10"] / frame_moment["m00"])
-        frame_centroid_y = int(frame_moment["m01"] / frame_moment["m00"])
+        frame_centroid_x = int(frame_moment["m10"] / m00)
+        frame_centroid_y = int(frame_moment["m01"] / m00)
 
         # Calculate the translation vector
         translation_x = reference_centroid_x - frame_centroid_x
         translation_y = reference_centroid_y - frame_centroid_y
 
         # Calculate the scale based on the ratio of reference moment to frame moment
-        scale = np.sqrt(reference_moment['m00'] / frame_moment['m00'])
+        scale = np.sqrt(reference_moment['m00'] / m00)
 
         # Calculate the angle of rotation based on the first Hu moment
         reference_hu_moment = cv2.HuMoments(reference_moment)

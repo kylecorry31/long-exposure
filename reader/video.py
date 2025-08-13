@@ -16,6 +16,18 @@ class VideoReader(Reader):
             return None
         return frame
     
+    def get_frame(self, i) -> np.ndarray:
+        if self._capture is None:
+            self._capture = cv2.VideoCapture(self._path)
+        self._capture.set(cv2.CAP_PROP_POS_FRAMES, i)
+        ret, frame = self._capture.read()
+        if not ret:
+            return None
+        return frame
+
+    def reset(self):
+        self.close()
+
     def total_frames(self) -> int:
         if self._capture is None:
             self._capture = cv2.VideoCapture(self._path)
