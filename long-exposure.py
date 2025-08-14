@@ -18,8 +18,8 @@ from stacking.minimum import MinimumStacker
 from reader.video import VideoReader
 from reader.folder import FolderReader
 from reader.sorted import SortedReader
+from reader.manual import ManualReader
 from scoring.brightness import BrightnessScorer
-from thresholding import has_valid_pixels
 import argparse
 from tqdm import tqdm
 import cv2
@@ -75,6 +75,17 @@ parser.add_argument(
     type=float,
     default=0.0
 )
+parser.add_argument(
+    "--scale",
+    help="scale to apply to brightness",
+    type=float,
+    default=0.0
+)
+parser.add_argument(
+    "--manual",
+    help="manually choose frames with an interactive viewer",
+    action="store_true"
+)
 
 args = parser.parse_args()
 
@@ -84,16 +95,23 @@ if os.path.isdir(args.input):
 else:
     reader = VideoReader(args.input)
 
-if args.score == "brightness":
-    reader = SortedReader(reader, BrightnessScorer(), args.top / 100.0, args.border / 100.0, args.threshold)
-elif args.score == "contrast":
-    reader = SortedReader(reader, ContrastScorer(), args.top / 100.0, args.border / 100.0, args.threshold)
-elif args.score == "sharpness":
-    reader = SortedReader(reader, SharpnessScorer(), args.top / 100.0, args.border / 100.0, args.threshold)
-elif args.score == "smallest":
-    reader = SortedReader(reader, SmallestAreaScorer(args.threshold), args.top / 100.0, args.border / 100.0, args.threshold)
-elif args.top < 100.0:
-    reader = SortedReader(reader, ContrastScorer(), args.top / 100.0, args.border / 100.0, args.threshold)
+# Optional manual selection; if enabled, skip automatic scoring/sorting
+if args.manual:
+    reader = ManualReader(reader, args.scale)
+
+if (not args.manual) and (args.score != "none" or args.top < 100.0):
+    if args.score == "brightness":
+        scorer = BrightnessScorer()
+    elif args.score == "contrast":
+        scorer = ContrastScorer()
+    elif args.score == "sharpness":
+        scorer = SharpnessScorer()
+    elif args.score == "smallest":
+        scorer = SmallestAreaScorer()
+    else:
+        scorer = ContrastScorer()
+    
+    reader = SortedReader(reader, scorer, args.top / 100.0, args.border / 100.0, args.threshold)
 
 # Create aligner
 if args.align == "sift":
@@ -129,6 +147,10 @@ aligned_folder = args.input + "_aligned"
 if not os.path.exists(aligned_folder):
     os.makedirs(aligned_folder)
 
+original_folder = args.input + "_selected"
+if not os.path.exists(original_folder):
+    os.makedirs(original_folder)
+
 # Stack frames
 i = 0
 with tqdm(total=reader.total_frames()) as pbar:
@@ -151,7 +173,10 @@ with tqdm(total=reader.total_frames()) as pbar:
             frame = cv2.rotate(frame, cv2.ROTATE_180)
         elif args.rotation == 270:
             frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
-            
+        
+        frame_path = os.path.join(original_folder, f"{i:05d}.jpg")
+        cv2.imwrite(frame_path, frame)
+
         frame = aligner.align(frame)
         if frame is None:
             continue
@@ -162,9 +187,11 @@ with tqdm(total=reader.total_frames()) as pbar:
             frame = cv2.bitwise_and(frame, frame, mask=mask)
 
         # Save frame back to a subfolder
-        frame_path = os.path.join(aligned_folder, f"{i}.jpg")
+        frame_path = os.path.join(aligned_folder, f"{i:05d}.jpg")
         cv2.imwrite(frame_path, frame)
 
+        if args.scale > 0:
+            frame = cv2.convertScaleAbs(frame, alpha=args.scale, beta=0)
         stacker.stack(frame)
         pbar.update(1)
 
