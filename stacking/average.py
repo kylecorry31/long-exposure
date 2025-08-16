@@ -9,9 +9,9 @@ class AverageStacker(Stacker):
 
     def stack(self, frame: np.ndarray):
         if self._stack is None:
-            self._stack = frame.astype(np.float64)
+            self._stack = frame.astype(np.float64, copy=False)
         else:
-            self._stack = np.add(self._stack, frame.astype(np.float64))
+            self._stack += frame
         self._count += 1
 
     def get_image(self) -> np.ndarray:

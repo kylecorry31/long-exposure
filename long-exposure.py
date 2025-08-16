@@ -33,11 +33,25 @@ parser.add_argument("output", help="path to output file")
 parser.add_argument(
     "--align",
     help="alignment method",
-    choices=["sift", "ecc", "moment", "moment_rotate", "orb", "fourier", "fft", "bottom-left", "planetary", "none"],
+    choices=[
+        "sift",
+        "ecc",
+        "moment",
+        "moment_rotate",
+        "orb",
+        "fourier",
+        "fft",
+        "bottom-left",
+        "planetary",
+        "none",
+    ],
     default="none",
 )
 parser.add_argument(
-    "--stack", help="stacking method", choices=["max", "avg", "min", "median"], default="avg"
+    "--stack",
+    help="stacking method",
+    choices=["max", "avg", "min", "median"],
+    default="avg",
 )
 parser.add_argument(
     "--top", help="percent of top frames to stack", type=float, default=100.0
@@ -52,39 +66,27 @@ parser.add_argument(
     default="none",
 )
 parser.add_argument(
-    "--rotation",
-    help="rotation angle of the image",
-    type=int,
-    default=0
+    "--rotation", help="rotation angle of the image", type=int, default=0
 )
-parser.add_argument(
-    "--step",
-    help="step to skip frames",
-    type=int,
-    default=1
-)
+parser.add_argument("--step", help="step to skip frames", type=int, default=1)
 parser.add_argument(
     "--mask",
     help="whether to use the threshold as a mask",
-    type=bool,
-    default=False
+    action="store_true",
 )
 parser.add_argument(
     "--border",
     help="ignore border percent (percent of the border area to ignore)",
     type=float,
-    default=0.0
+    default=0.0,
 )
 parser.add_argument(
-    "--scale",
-    help="scale to apply to brightness",
-    type=float,
-    default=0.0
+    "--scale", help="scale to apply to brightness", type=float, default=0.0
 )
 parser.add_argument(
     "--manual",
     help="manually choose frames with an interactive viewer",
-    action="store_true"
+    action="store_true",
 )
 
 args = parser.parse_args()
@@ -107,11 +109,13 @@ if (not args.manual) and (args.score != "none" or args.top < 100.0):
     elif args.score == "sharpness":
         scorer = SharpnessScorer()
     elif args.score == "smallest":
-        scorer = SmallestAreaScorer()
+        scorer = SmallestAreaScorer(args.threshold)
     else:
         scorer = ContrastScorer()
-    
-    reader = SortedReader(reader, scorer, args.top / 100.0, args.border / 100.0, args.threshold)
+
+    reader = SortedReader(
+        reader, scorer, args.top / 100.0, args.border / 100.0, args.threshold
+    )
 
 # Create aligner
 if args.align == "sift":
@@ -173,7 +177,7 @@ with tqdm(total=reader.total_frames()) as pbar:
             frame = cv2.rotate(frame, cv2.ROTATE_180)
         elif args.rotation == 270:
             frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
-        
+
         frame_path = os.path.join(original_folder, f"{i:05d}.jpg")
         cv2.imwrite(frame_path, frame)
 
@@ -183,7 +187,9 @@ with tqdm(total=reader.total_frames()) as pbar:
 
         # Apply mask
         if args.mask:
-            mask = cv2.inRange(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), args.threshold, 255)
+            mask = cv2.inRange(
+                cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), args.threshold, 255
+            )
             frame = cv2.bitwise_and(frame, frame, mask=mask)
 
         # Save frame back to a subfolder

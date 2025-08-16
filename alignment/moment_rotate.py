@@ -1,6 +1,7 @@
 from . import Aligner
 import cv2
 import numpy as np
+from thresholding import apply_threshold
 
 
 class MomentRotateAligner(Aligner):
@@ -9,15 +10,13 @@ class MomentRotateAligner(Aligner):
         self.threshold = threshold
 
     def apply_threshold(self, frame):
-        converted_frame = cv2.cvtColor(frame.astype(np.uint8), cv2.COLOR_BGR2GRAY)
-        _, converted_frame = cv2.threshold(
-            converted_frame, self.threshold, 255, cv2.THRESH_TOZERO
-        )
-        return converted_frame
+        return apply_threshold(frame, self.threshold, True)
 
     def set_reference(self, reference):
         self.reference = self.apply_threshold(reference)
-        
+        self.reference_moment = cv2.moments(self.reference, True)
+        self.reference_hu_moment = cv2.HuMoments(self.reference_moment)
+
     def align(self, frame):
         if self.reference is None:
             self.set_reference(frame)
@@ -27,17 +26,16 @@ class MomentRotateAligner(Aligner):
         gray_frame = self.apply_threshold(frame)
 
         # Find the image moment of the reference and current frame
-        reference_moment = cv2.moments(self.reference)
-        frame_moment = cv2.moments(gray_frame)
+        frame_moment = cv2.moments(gray_frame, True)
 
         # Calculate the centroid of the reference and current frame
         m00 = frame_moment["m00"]
         if m00 == 0:
             print("Warning: Frame moment is zero, cannot align frame.")
             return None
-        
-        reference_centroid_x = int(reference_moment["m10"] / reference_moment["m00"])
-        reference_centroid_y = int(reference_moment["m01"] / reference_moment["m00"])
+
+        reference_centroid_x = int(self.reference_moment["m10"] / self.reference_moment["m00"])
+        reference_centroid_y = int(self.reference_moment["m01"] / self.reference_moment["m00"])
         frame_centroid_x = int(frame_moment["m10"] / m00)
         frame_centroid_y = int(frame_moment["m01"] / m00)
 
@@ -46,17 +44,21 @@ class MomentRotateAligner(Aligner):
         translation_y = reference_centroid_y - frame_centroid_y
 
         # Calculate the scale based on the ratio of reference moment to frame moment
-        scale = np.sqrt(reference_moment['m00'] / m00)
+        scale = np.sqrt(self.reference_moment["m00"] / m00)
 
         # Calculate the angle of rotation based on the first Hu moment
-        reference_hu_moment = cv2.HuMoments(reference_moment)
         frame_hu_moment = cv2.HuMoments(frame_moment)
-        angle = np.arctan2(reference_hu_moment[0] - frame_hu_moment[0], frame_hu_moment[0] + reference_hu_moment[0])[0]
+        angle = np.arctan2(
+            self.reference_hu_moment[0] - frame_hu_moment[0],
+            frame_hu_moment[0] + self.reference_hu_moment[0],
+        )[0]
 
         rows, cols = self.reference.shape
 
         # Scale and rotate the current frame with the frame centroid as the pivot
-        M = cv2.getRotationMatrix2D((frame_centroid_x, frame_centroid_y), np.degrees(angle), scale)
+        M = cv2.getRotationMatrix2D(
+            (frame_centroid_x, frame_centroid_y), np.degrees(angle), scale
+        )
         aligned_frame = cv2.warpAffine(frame, M, (cols, rows))
 
         # Warp the current frame (translation)
